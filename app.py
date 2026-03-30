@@ -179,7 +179,7 @@ if uploaded_files:
 
                 st.write(preview + "...")
 
-                if st.button(f"Read Full Resume {i}"):
+                if st.button(f"Read Full Resume"):
                     st.write(row["Resume_str"])
 
     # =============================
