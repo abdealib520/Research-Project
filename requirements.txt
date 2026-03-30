@@ -2,7 +2,7 @@ streamlit
 pandas
 numpy
 scikit-learn
-torch
+torch==2.0.1
 transformers
 spacy
 PyPDF2
