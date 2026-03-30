@@ -179,7 +179,7 @@ if uploaded_files:
 
                 st.write(preview + "...")
 
-                if st.button(f"Read Full Resume"):
+                if st.button(f"Read Full Resume",key=f"btn_{i}"):
                     st.write(row["Resume_str"])
 
     # =============================
@@ -211,7 +211,7 @@ if uploaded_files:
 
                     st.write(preview + "...")
 
-                    if st.button(f"Read Full Resume"):
+                    if st.button(f"Read Full Resume",key=f"btn_{i}"):
                         st.write(row["Resume_str"])
 
             st.divider()
