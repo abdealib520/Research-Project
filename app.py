@@ -91,32 +91,61 @@ def filter_by_degree(df, degree_type):
     return df[df["Resume_str"].str.contains(pattern, case=False, na=False)]
 
 # -------------------------------
-# LOAD DATA + EMBEDDINGS (CACHED)
+# LOAD DEFAULT DATA (CACHED)
 # -------------------------------
 @st.cache_data
-def load_data():
+def load_default_data():
 
-    df = pd.read_csv(
-        r"Resume.csv"
-    )
+    df = pd.read_csv("Resume.csv")
 
     df = df[df["Resume_str"].str.contains("Python|Java", case=False, na=False)]
 
     df["clean_resume"] = df["Resume_str"].apply(preprocess_resume)
 
-    resume_embeddings = np.load(
-        r"resume_embeddings.npy"
-    )
+    resume_embeddings = np.load("resume_embeddings.npy")
 
     return df, resume_embeddings
-
-df, resume_embeddings = load_data()
 
 # -------------------------------
 # STREAMLIT UI
 # -------------------------------
 st.title("AI Resume Similarity Matcher")
 
+# -------------------------------
+# CSV UPLOAD OPTION
+# -------------------------------
+st.subheader("Upload Custom Resume Dataset (Optional)")
+
+uploaded_csv = st.file_uploader("Upload Resume CSV", type=["csv"])
+
+# -------------------------------
+# LOAD DATA
+# -------------------------------
+if uploaded_csv is not None:
+
+    st.info("Using uploaded dataset...")
+
+    df = pd.read_csv(uploaded_csv)
+
+    if "Resume_str" not in df.columns:
+        st.error("CSV must contain 'Resume_str' column")
+        st.stop()
+
+    df = df[df["Resume_str"].str.contains("Python|Java", case=False, na=False)]
+
+    df["clean_resume"] = df["Resume_str"].apply(preprocess_resume)
+
+    with st.spinner("Generating embeddings..."):
+        embeddings = df["clean_resume"].apply(get_embedding)
+        resume_embeddings = np.vstack(embeddings.values)
+
+else:
+    st.info("Using default dataset...")
+    df, resume_embeddings = load_default_data()
+
+# -------------------------------
+# FILE UPLOAD
+# -------------------------------
 uploaded_files = st.file_uploader(
     "Upload High Performer Resume(s) (PDF)",
     type=["pdf"],
@@ -140,12 +169,12 @@ if uploaded_files:
 
     filtered_df = filter_by_degree(df, degree_filter)
 
-    # Fix index issue
+    # FIX INDEX ISSUE
     filtered_df = filtered_df.reset_index(drop=True)
     filtered_embeddings = resume_embeddings[:len(filtered_df)]
 
     # =============================
-    # 🔥 COMBINED MATCHING
+    # COMBINED MATCHING
     # =============================
     if mode == "Combined Matching (Recommended)":
 
@@ -161,7 +190,6 @@ if uploaded_files:
             emb = get_embedding(hp_clean)
             all_embeddings.append(emb)
 
-        # Combine embeddings
         combined_embedding = np.mean(np.vstack(all_embeddings), axis=0).reshape(1, -1)
 
         similarities = cosine_similarity(combined_embedding, filtered_embeddings)[0]
@@ -179,15 +207,15 @@ if uploaded_files:
 
                 st.write(preview + "...")
 
-                if st.button(f"Read Full Resume",key=f"btn_{i}"):
+                if st.button("Read Full Resume", key=f"combined_{i}"):
                     st.write(row["Resume_str"])
 
     # =============================
-    # 🔥 SEPARATE MATCHING
+    # SEPARATE MATCHING
     # =============================
     else:
 
-        for file in uploaded_files:
+        for file_idx, file in enumerate(uploaded_files):
 
             st.success(f"Processing: {file.name}")
 
@@ -211,7 +239,7 @@ if uploaded_files:
 
                     st.write(preview + "...")
 
-                    if st.button(f"Read Full Resume",key=f"btn_{i}"):
+                    if st.button("Read Full Resume", key=f"separate_{file_idx}_{i}"):
                         st.write(row["Resume_str"])
 
             st.divider()
